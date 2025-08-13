@@ -28,3 +28,15 @@ res = requests.post(f"{base_url}/generate_storyboard", json={
     "language_code": "en"
 })
 print("/generate_storyboard:", res.json())
+
+# Test /generate_storyboard
+res = requests.post(f"{base_url}/generate_storyboard", json={
+    "image1_path": "image_path",
+    "image2_path": "image_path",
+    "pitch": "Urban travel adventure",
+    "num_scenes": 1,
+    "style": "cinematic",
+    "language_name": "English",
+    "language_code": "en"
+})
+print("/generate_storyboard:", res.json())
