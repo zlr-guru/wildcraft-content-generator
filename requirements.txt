@@ -1,0 +1,11 @@
+Flask
+flask-cors
+python-dotenv
+pillow
+google-cloud-aiplatform
+vertexai
+gunicorn
+requests
+matplotlib
+gradio
+numpy

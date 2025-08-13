@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+bayport-sa.json
+generated_images/
+*.png
+*.webp
