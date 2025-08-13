@@ -26,14 +26,18 @@ def api_generate_storyboard():
         if not all(field in data for field in required_fields):
             return jsonify({"error": f"Missing required fields. Required: {required_fields}"}), 400
 
+        language_name = data.get("language_name", "English")
+        language_code = data.get("language_code", "en")
+        num_scenes = data.get("num_scenes", 1)
+
         result = generate_storyboard(
             data["image1_path"],
             data["image2_path"],
             data["pitch"],
-            data["num_scenes"],
+            num_scenes,
             data["style"],
-            data["language_name"],
-            data["language_code"]
+            language_name,
+            language_code
         )
         return jsonify({"storyboard": result})
     except Exception as e:
@@ -48,11 +52,14 @@ def api_get_scenario_prompt_with_images():
         if not all(field in data for field in required_fields):
             return jsonify({"error": f"Missing required fields. Required: {required_fields}"}), 400
 
+        language = data.get("language", "English")
+        num_scenes = data.get("num_scenes", 1)
+
         result = get_scenario_prompt_with_images(
             data["pitch"],
-            data["num_scenes"],
+            num_scenes,
             data["style"],
-            data["language"]
+            language
         )
         return jsonify({"prompt": result})
     except Exception as e:
