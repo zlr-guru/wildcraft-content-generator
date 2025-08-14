@@ -2,13 +2,12 @@ from flask import Flask, request, jsonify
 from vcraft import (
     generate_product_description,
     generate_product_tags,
-    generate_images_using_storyboard,
+    generate_storyboard_images,
     generate_storyboard_with_prompt,
     change_background_with_gemini
 )
-
-from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+from io import BytesIO
 import os
 import traceback
 
@@ -82,26 +81,22 @@ def api_generate_storyboard():
         return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
 
-@app.route("/get_scenario_prompt_with_images", methods=["POST"])
-def api_get_scenario_prompt_with_images():
+@app.route("/generate_storyboard_image", methods=["POST"])
+def generate_image_endpoint():
+    data = request.json
+    storyboard = data.get("storyboard")
+    num_images = data.get("num_images", 1)
+    api_key = data.get("api_key")  # API key can be passed in request
+
+    if not storyboard:
+        return jsonify({"error": "Storyboard is required"}), 400
+
     try:
-        data = request.json
-        required_fields = ["pitch", "num_scenes", "style", "language"]
-        if not all(field in data for field in required_fields):
-            return jsonify({"error": f"Missing required fields. Required: {required_fields}"}), 400
-
-        language = data.get("language", "English")
-        num_scenes = data.get("num_scenes", 1)
-
-        result = generate_images_using_storyboard(
-            data["pitch"],
-            num_scenes,
-            data["style"],
-            language
-        )
-        return jsonify({"prompt": result})
+        file_paths = generate_storyboard_images(storyboard, num_images, api_key)
+        return jsonify({"message": "Images generated successfully", "files": file_paths})
     except Exception as e:
-        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/change_background", methods=["POST"])
 def api_change_background():

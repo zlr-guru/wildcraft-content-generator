@@ -4,27 +4,27 @@ from google.genai import types
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-print("Using credentials from:", os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
+# print("Using credentials from:", os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
 
-import vertexai
+# import vertexai
 
-PROJECT_ID = os.getenv("PROJECT_ID")
-LOCATION = os.getenv("LOCATION")
-vertexai.init(project=PROJECT_ID, location=LOCATION)
-
-
+# PROJECT_ID = os.getenv("PROJECT_ID")
+# LOCATION = os.getenv("LOCATION")
+# vertexai.init(project=PROJECT_ID, location=LOCATION)
 
 import base64
 import io
+import json     
 from typing import Optional, Tuple, Union, List
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image as im
 # import gradio as gr
+from typer import prompt
 from vertexai.preview.vision_models import (
     ImageGenerationModel,
 )
@@ -35,6 +35,7 @@ from google import genai
 from google.genai import types
 from PIL import Image as PILImage
 import io
+from io import BytesIO
 
 def resize_image(image_path, max_size=(1024, 1024)):
     """Resize image for faster processing."""
@@ -133,14 +134,6 @@ def generate_product_tags(image1_path, image2_path, google_api_key):
         print(f"Error generating product tags: {e}")
         return "Error generating product tags."
 
-    # try:
-    #     json_start = response.text.find('{')
-    #     parsed_json = json.loads(response.text[json_start:])
-    #     return json.dumps(parsed_json, indent=2)
-    # except Exception as e:
-    #     return {"error": "Could not parse response", "raw_output": response.text}
-
-
 
 def generate_storyboard_with_prompt(google_api_key, image1_path, image2_path, pitch, num_scenes, style, language_name, language_code):
     """
@@ -235,28 +228,32 @@ You will be given:
     return response.text.strip()
 
 
-from vertexai.preview.vision_models import ImageGenerationModel
+def init_client(api_key=None):
+    from google import genai
+    if api_key:
+        os.environ["GEMINI_API_KEY"] = api_key
+    return genai.Client()
 
-from google.auth import credentials
-from vertexai.preview.vision_models import ImageGenerationModel
+def generate_storyboard_images(storyboard, num_images=1, api_key=None, save_dir="generated_images"):
+    """
+    Generate images using Google Imagen API.
 
-# Initialize with your project and location
-# generation_model = ImageGenerationModel.from_pretrained("imagegeneration@002")
-IMAGEN_MODEL = "imagen-3.0-generate-002"
-generation_model = ImageGenerationModel.from_pretrained(IMAGEN_MODEL)
+    Args:
+        storyboard (str): Storyboard description to generate images from.
+        num_images (int): Number of images to generate.
+        api_key (str, optional): Google API key. If not provided, uses env var.
+        save_dir (str): Directory to save images.
 
+    Returns:
+        list: List of file paths for saved images.
+    """
+    # Ensure save directory exists
+    os.makedirs(save_dir, exist_ok=True)
 
-import base64
-from io import BytesIO
-from google.genai import types
-from PIL import Image as PILImage
+    # Initialize client
+    client = init_client(api_key)
 
-def generate_images_using_storyboard(storyboard, product_type=None):
-    """Generate images for each scene in the storyboard using the generation_model."""
-    try:
-        generated_images = []
-
-        gen_prompt = f"""
+    base_prompt = f"""
         Create a highly realistic, cinematic lifestyle photograph based on the following storyboard description:
         {storyboard}.
         The image should depict natural lighting, real human appearances, authentic clothing textures, and realistic backgrounds.
@@ -266,28 +263,26 @@ def generate_images_using_storyboard(storyboard, product_type=None):
         Create only a single image. Do not create a collage.
         """
 
-        print(f"Generating images with prompt: {gen_prompt}")
+    if isinstance(base_prompt, dict):
+        prompt = json.dumps(base_prompt, indent=2)
+    else:
+        prompt = str(base_prompt)
+    
+    # Request image generation
+    response = client.models.generate_images(
+        model="imagen-4.0-generate-preview-06-06",
+        prompt=prompt,
+        config=types.GenerateImagesConfig(number_of_images=num_images)
+    )
 
-        # Call image generation model
-        images = generation_model.generate_images(
-            prompt=gen_prompt,
-            number_of_images=2,
-            add_watermark=False
-        )
+    saved_files = []
+    for idx, generated_image in enumerate(response.generated_images):
+        file_path = os.path.join(save_dir, f"storyboard_{idx+1}.png")
+        with open(file_path, "wb") as f:
+            f.write(generated_image.image.image_bytes)
+        saved_files.append(file_path)
 
-        for image in images:
-            pil_image = image._pil_image  # direct method from GeneratedImage
-
-            if pil_image.mode != 'RGBA':
-                pil_image = pil_image.convert('RGBA')
-
-            generated_images.append(pil_image)
-
-        return generated_images
-
-    except Exception as e:
-        print(f"Error generating images: {e}")
-        return []
+    return saved_files
 
 def change_background_with_gemini(google_api_key, image_path, prompt):
     try:
@@ -329,91 +324,91 @@ def change_background_with_gemini(google_api_key, image_path, prompt):
 
 
 
-import gradio as gr
+# import gradio as gr
 
 
-with gr.Blocks(title="WILDCRAFT PDP Content Generation") as interface:
-    gr.Markdown("## Upload Two images to generate Description and Tags for WildCraft Products")
+# with gr.Blocks(title="WILDCRAFT PDP Content Generation") as interface:
+#     gr.Markdown("## Upload Two images to generate Description and Tags for WildCraft Products")
 
-    with gr.Row():
-        image1 = gr.Image(type="pil", label="Image 1")
-        image2 = gr.Image(type="pil", label="Image 2")
+#     with gr.Row():
+#         image1 = gr.Image(type="pil", label="Image 1")
+#         image2 = gr.Image(type="pil", label="Image 2")
 
-    with gr.Row():
-        description_box = gr.Textbox(
-            label="Generated Product Description"
-        )
-        tags_box = gr.Textbox(
-            label="Generated Product Tags"
-        )
-
-
-    with gr.Row():
-        pitch_input = gr.Textbox(label="Story Pitch", placeholder="Enter your storyboard idea...")
-        num_scenes_input = gr.Number(label="Number of Scenes", value=4, precision=0)
-        style_input = gr.Textbox(label="Style", placeholder="Cinematic, Minimalist, etc.")
-        language_name = gr.Textbox(label="Language Name", value="English")
-        language_code = gr.Textbox(label="Language Code", value="en")
+#     with gr.Row():
+#         description_box = gr.Textbox(
+#             label="Generated Product Description"
+#         )
+#         tags_box = gr.Textbox(
+#             label="Generated Product Tags"
+#         )
 
 
+#     with gr.Row():
+#         pitch_input = gr.Textbox(label="Story Pitch", placeholder="Enter your storyboard idea...")
+#         num_scenes_input = gr.Number(label="Number of Scenes", value=4, precision=0)
+#         style_input = gr.Textbox(label="Style", placeholder="Cinematic, Minimalist, etc.")
+#         language_name = gr.Textbox(label="Language Name", value="English")
+#         language_code = gr.Textbox(label="Language Code", value="en")
 
-    with gr.Row():
-        generate_description = gr.Button("Generate Product Description")
-        generate_tags_btn = gr.Button("Generate Product Tags")
-        generate_storyboard_btn = gr.Button("Generate Storyboard")
 
 
-    generate_description.click(
-        fn=generate_product_description,
-        inputs=[image1, image2],
-        outputs=description_box
-    )
+#     with gr.Row():
+#         generate_description = gr.Button("Generate Product Description")
+#         generate_tags_btn = gr.Button("Generate Product Tags")
+#         generate_storyboard_btn = gr.Button("Generate Storyboard")
 
-    generate_tags_btn.click(
-        fn=generate_product_tags,
-        inputs=[image1, image2],
-        outputs=tags_box
-    )
 
-    with gr.Row():
-        storyboard_box = gr.Textbox(
-            label="Generated Storyboard"
-        )
+#     generate_description.click(
+#         fn=generate_product_description,
+#         inputs=[image1, image2],
+#         outputs=description_box
+#     )
 
-    generate_storyboard_btn.click(
-        fn=generate_storyboard_with_prompt,
-        inputs=[image1, image2, pitch_input, num_scenes_input, style_input, language_name, language_code],
-        outputs=storyboard_box
-    )
+#     generate_tags_btn.click(
+#         fn=generate_product_tags,
+#         inputs=[image1, image2],
+#         outputs=tags_box
+#     )
 
-    with gr.Row():
-        generate_images_btn = gr.Button("Generate Images from Storyboard")
-    gallery = gr.Gallery(label="Generated Storyboard Images",columns=2 , height="auto")
+#     with gr.Row():
+#         storyboard_box = gr.Textbox(
+#             label="Generated Storyboard"
+#         )
 
-    generate_images_btn.click(
-        fn=generate_images_using_storyboard,
-        inputs=storyboard_box,
-        outputs=gallery
-    )
+#     generate_storyboard_btn.click(
+#         fn=generate_storyboard_with_prompt,
+#         inputs=[image1, image2, pitch_input, num_scenes_input, style_input, language_name, language_code],
+#         outputs=storyboard_box
+#     )
 
-    with gr.Row():
-        input_img = gr.Image(type="pil", label="Upload Product Image")
-        prompt_box = gr.Textbox(label="Background Change Prompt", placeholder="e.g., Add a Wildcraft store in the background")
+#     with gr.Row():
+#         generate_images_btn = gr.Button("Generate Images from Storyboard")
+#     gallery = gr.Gallery(label="Generated Storyboard Images",columns=2 , height="auto")
 
-    with gr.Row():
-        generate_btn = gr.Button("Generate Image")
+#     generate_images_btn.click(
+#         fn=generate_images_using_storyboard,
+#         inputs=storyboard_box,
+#         outputs=gallery
+#     )
 
-    with gr.Row():
-        output_img = gr.Image(label="Generated Image")
-        # output_text = gr.Textbox(label="Gemini's Response", lines=3)
+#     with gr.Row():
+#         input_img = gr.Image(type="pil", label="Upload Product Image")
+#         prompt_box = gr.Textbox(label="Background Change Prompt", placeholder="e.g., Add a Wildcraft store in the background")
 
-    generate_btn.click(
-        fn=change_background_with_gemini,
-        inputs=[input_img, prompt_box],
-        outputs=output_img
-    )
+#     with gr.Row():
+#         generate_btn = gr.Button("Generate Image")
 
-if __name__ == "__main__":
-    interface.launch(debug=True)
+#     with gr.Row():
+#         output_img = gr.Image(label="Generated Image")
+#         # output_text = gr.Textbox(label="Gemini's Response", lines=3)
+
+#     generate_btn.click(
+#         fn=change_background_with_gemini,
+#         inputs=[input_img, prompt_box],
+#         outputs=output_img
+#     )
+
+# if __name__ == "__main__":
+#     interface.launch(debug=True)
 
 
