@@ -9,7 +9,7 @@ url = "http://127.0.0.1:5000/generate_storyboard_image"
 payload = {
     "storyboard": storyboard_text,
     "num_images": 1,
-    "api_key": "AIzaSyAZcg46NcnId88vQsHzwwda6e1MaXLVEn4"  # optional if already set in env
+    "api_key": "api_key"  # optional if already set in env
 }
 
 response = requests.post(url, json=payload)
