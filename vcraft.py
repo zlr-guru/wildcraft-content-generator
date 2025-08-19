@@ -76,9 +76,41 @@ def generate_product_description(image1_path, image2_path, google_api_key):
 
         # Prompt
         base_prompt = """
-        You are a product content writer for Wildcraft, a brand known for outdoor gear and travel accessories.
-        Write a detailed, SEO-friendly product description for the provided images.
-        Make sure it is engaging, informative, and professional.
+                You are a product content writer for Wildcraft, a performance-oriented outdoor lifestyle brand known for functional, durable, and stylish gear.
+                Based on the provided product image(s), write a detailed, engaging, and brand-aligned product description for use on Wildcraft’s official product page.
+
+                 Instructions for the Output:
+                Your generated description must:
+                Start with a punchy, branded intro
+
+                - Start with a **dynamic and varied introduction**. Avoid repeating phrases like "Introducing the X Backpack".
+                Use alternative openers that match the Wildcraft tone (e.g., “Engineered for the everyday explorer,” or “Crafted for comfort and resilience on the move.”)
+
+               - Include visually inferred features from the image, such as:
+               - Number and type of compartments/pockets
+               - Fabric texture, color, or layering
+               - Zippers, straps, handle design, soles, mesh panels, reflective details
+               - Padding or ergonomic shape
+
+                 Tone & Style Guide:
+               - Wildcraft’s tone is confident, active, practical, and design-forward.
+               - Use short, energetic sentences.
+               - Highlight features + benefits (not just specs).
+               - Avoid technical jargon or overly flowery language.
+               - The description should feel both functional and aspirational, tailored for everyday adventurers.
+
+                Call out functional and design features:
+               - Storage capacity (estimated if not given)
+               - Water-repellent/waterproof elements
+               - Durability (e.g., reinforced stitching, YKK zippers)
+               - Comfort (e.g., padded straps, breathable back panel)
+               - Mention use cases
+               - Commuting, trekking, city travel, monsoon utility, outdoor adventures
+               - Finish with an aspirational but grounded closing line
+                Example: “Elevate your adventures with the Evo 35 – your all-in-one travel partner!”
+
+                **Focus strictly on the product do not suggest any matching accessories for the product.**
+                Give a 2 -3 paragraph descrption not more than that focusing on all the aspects mentioned.
         """
 
         # Generate
@@ -108,18 +140,24 @@ def generate_product_tags(image1_path, image2_path, google_api_key):
         img2_b64 = image_to_base64(image2_path)
 
         # Prompt
-        base_prompt = """
+        base_prompt = f"""
         You are an intelligent product content parser for an e-commerce platform.
-        Look at the provided product images and generate JSON tags containing:
-        {
-          "category": "",
-          "color": "",
-          "material": "",
-          "activity": "",
-          "gender": "",
-          "keywords": []
-        }
-        Only return valid JSON.
+
+        Given one or more product images, analyze the visual details , extract the following structured fields in JSON format:
+
+        - Key Feature (list of distinct single worded features or benefits)
+        - Technology (zippers, tech-enabled design, special construction,Hypalite - for bags with room capacity less than 40 liters)
+        - Material (e.g., Nylon, Polyester depict the correct material from the images provided.)
+        - Gender (Capture the correct gender either Men, Women, Unisex from the image.)
+        - Occasion (e.g., Travel, Outdoor, Work, Hiking)
+        - Compartments (e.g., "2 main compartments, 1 front pocket")
+        - Sleeve Type (Only if the product is apparel and sleeves are visible, e.g., "Full Sleeve", "Sleeveless")
+        - Compartment Closure (e.g., Zipper, Buckle)
+        - Imported or Manufactured or Marketed By (Default: "Wildcraft India")
+
+        Respond as N/A for a feature if it is not eligible for the product.
+
+        Respond ONLY with JSON.
         """
 
         # Generate
@@ -333,92 +371,94 @@ def change_background_with_gemini(google_api_key, image_path, prompt):
         return None, f"Error: {e}"
 
 
+import gradio as gr
+
+# Wrap functions with api_key input
+def wrapper_generate_product_description(image1, image2, api_key):
+    return generate_product_description(image1, image2, api_key)
+
+def wrapper_generate_product_tags(image1, image2, api_key):
+    return generate_product_tags(image1, image2, api_key)
+
+def wrapper_generate_storyboard(image1, image2, pitch, num_scenes, style, language_name, language_code, api_key):
+    return generate_storyboard_with_prompt(api_key, image1, image2, pitch, num_scenes, style, language_name, language_code)
+
+def wrapper_generate_storyboard_images(storyboard, num_images, api_key):
+    return generate_storyboard_images(storyboard, num_images=num_images, api_key=api_key)
+
+def wrapper_change_background(api_key, image, bg_prompt):
+    output, path = change_background_with_gemini(api_key, image, bg_prompt)
+    return output
 
 # import gradio as gr
 
-
 # with gr.Blocks(title="WILDCRAFT PDP Content Generation") as interface:
-#     gr.Markdown("## Upload Two images to generate Description and Tags for WildCraft Products")
+#     gr.Markdown("## 🏕️ Wildcraft Product Content & Storyboard Generator")
 
-#     with gr.Row():
-#         image1 = gr.Image(type="pil", label="Image 1")
-#         image2 = gr.Image(type="pil", label="Image 2")
+#     api_key = gr.Textbox(label="Google API Key", type="password")
 
-#     with gr.Row():
-#         description_box = gr.Textbox(
-#             label="Generated Product Description"
+#     with gr.Tab("Product Content"):
+#         with gr.Row():
+#             image1 = gr.Image(type="filepath", label="Upload Product Image 1")
+#             image2 = gr.Image(type="filepath", label="Upload Product Image 2")
+
+#         with gr.Row():
+#             generate_description = gr.Button("✨ Generate Product Description")
+#             generate_tags_btn = gr.Button("🏷️ Generate Product Tags")
+
+#         description_box = gr.Textbox(label="Generated Product Description")
+#         tags_box = gr.Textbox(label="Generated Product Tags (JSON)")
+
+#         generate_description.click(
+#             fn=wrapper_generate_product_description,
+#             inputs=[image1, image2, api_key],
+#             outputs=description_box
 #         )
-#         tags_box = gr.Textbox(
-#             label="Generated Product Tags"
+
+#         generate_tags_btn.click(
+#             fn=wrapper_generate_product_tags,
+#             inputs=[image1, image2, api_key],
+#             outputs=tags_box
 #         )
 
-
-#     with gr.Row():
+#     with gr.Tab("Storyboard"):
 #         pitch_input = gr.Textbox(label="Story Pitch", placeholder="Enter your storyboard idea...")
-#         num_scenes_input = gr.Number(label="Number of Scenes", value=4, precision=0)
+#         num_scenes_input = gr.Number(label="Number of Scenes", value=1, precision=0)
 #         style_input = gr.Textbox(label="Style", placeholder="Cinematic, Minimalist, etc.")
-#         language_name = gr.Textbox(label="Language Name", value="English")
-#         language_code = gr.Textbox(label="Language Code", value="en")
 
+#         generate_storyboard_btn = gr.Button("🎬 Generate Storyboard JSON")
+#         storyboard_box = gr.Textbox(label="Generated Storyboard JSON")
 
-
-#     with gr.Row():
-#         generate_description = gr.Button("Generate Product Description")
-#         generate_tags_btn = gr.Button("Generate Product Tags")
-#         generate_storyboard_btn = gr.Button("Generate Storyboard")
-
-
-#     generate_description.click(
-#         fn=generate_product_description,
-#         inputs=[image1, image2],
-#         outputs=description_box
-#     )
-
-#     generate_tags_btn.click(
-#         fn=generate_product_tags,
-#         inputs=[image1, image2],
-#         outputs=tags_box
-#     )
-
-#     with gr.Row():
-#         storyboard_box = gr.Textbox(
-#             label="Generated Storyboard"
+#         generate_storyboard_btn.click(
+#             fn=wrapper_generate_storyboard,
+#             inputs=[image1, image2, pitch_input, num_scenes_input, style_input, api_key],
+#             outputs=storyboard_box
 #         )
 
-#     generate_storyboard_btn.click(
-#         fn=generate_storyboard_with_prompt,
-#         inputs=[image1, image2, pitch_input, num_scenes_input, style_input, language_name, language_code],
-#         outputs=storyboard_box
-#     )
+#         with gr.Row():
+#             num_images = gr.Number(label="Number of Images", value=1, precision=0)
+#             generate_images_btn = gr.Button("🖼️ Generate Storyboard Images")
 
-#     with gr.Row():
-#         generate_images_btn = gr.Button("Generate Images from Storyboard")
-#     gallery = gr.Gallery(label="Generated Storyboard Images",columns=2 , height="auto")
+#         gallery = gr.Gallery(label="Generated Storyboard Images", columns=2, height="auto")
 
-#     generate_images_btn.click(
-#         fn=generate_images_using_storyboard,
-#         inputs=storyboard_box,
-#         outputs=gallery
-#     )
+#         generate_images_btn.click(
+#             fn=wrapper_generate_storyboard_images,
+#             inputs=[storyboard_box, num_images, api_key],
+#             outputs=gallery
+#         )
 
-#     with gr.Row():
-#         input_img = gr.Image(type="pil", label="Upload Product Image")
+#     with gr.Tab("Background Changer"):
+#         input_img = gr.Image(type="filepath", label="Upload Product Image")
 #         prompt_box = gr.Textbox(label="Background Change Prompt", placeholder="e.g., Add a Wildcraft store in the background")
+#         generate_btn = gr.Button("🔄 Change Background")
+#         output_img = gr.Image(label="Background Changed Image")
 
-#     with gr.Row():
-#         generate_btn = gr.Button("Generate Image")
+#         generate_btn.click(
+#             fn=wrapper_change_background,
+#             inputs=[api_key, input_img, prompt_box],
+#             outputs=output_img
+#         )
 
-#     with gr.Row():
-#         output_img = gr.Image(label="Generated Image")
-#         # output_text = gr.Textbox(label="Gemini's Response", lines=3)
-
-#     generate_btn.click(
-#         fn=change_background_with_gemini,
-#         inputs=[input_img, prompt_box],
-#         outputs=output_img
-#     )
 
 # if __name__ == "__main__":
 #     interface.launch(debug=True)
-
-
