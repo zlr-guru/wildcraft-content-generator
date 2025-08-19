@@ -301,10 +301,20 @@ def change_background_with_gemini(google_api_key, image_path, prompt):
         # Initialize Gemini client
         client = genai.Client(api_key=google_api_key)
 
+        system_message = """
+            You are a highly skilled background change assistant.  
+            Your role is to modify or replace the background of images while strictly preserving the main subject’s integrity, details, and proportions.  
+            Always ensure that the output looks natural, high-quality, and visually consistent with the subject.  
+            Do not alter the subject’s appearance, angle, POV, clothing, or identity.  
+            If the user provides creative background prompts, adapt them faithfully while maintaining photorealism and proper lighting.  
+            Never remove, distort, or obscure the main subject.  
+                    """
+
+        full_prompt = system_message + prompt
         # Send to Gemini API
         response = client.models.generate_content(
             model="gemini-2.0-flash-preview-image-generation",
-            contents=[prompt, img],
+            contents=[full_prompt, img],
             config=genai.types.GenerateContentConfig(
                 response_modalities=['TEXT', 'IMAGE']
             )

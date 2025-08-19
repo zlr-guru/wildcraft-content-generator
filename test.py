@@ -1,18 +1,18 @@
 import requests
 
-from wcraft import generate_images_using_storyboard
+# from wcraft import generate_images_using_storyboard
 
 BASE_URL = "http://127.0.0.1:5000"
 
-# 1. Test generate_product_description
-url = f"{BASE_URL}/generate_product_description"
-payload = {
-    "image1_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\bag_1.jpg",
-    "image2_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\bag_2.jpg",
-    "google_api_key": "API_KEY"
-}
-r = requests.post(url, json=payload)
-print("generate_product_tags:", r.json())
+# # 1. Test generate_product_description
+# url = f"{BASE_URL}/generate_product_description"
+# payload = {
+#     "image1_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\bag_1.jpg",
+#     "image2_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\bag_2.jpg",
+#     "google_api_key": "API_KEY"
+# }
+# r = requests.post(url, json=payload)
+# print("generate_product_tags:", r.json())
 
 
 
@@ -43,20 +43,20 @@ print("generate_product_tags:", r.json())
 # })
 # print("/generate_storyboard:", res.json())
 
-# # 4. Test change_background
-# import requests
+# 4. Test change_background
+import requests
 
 
-# payload = {
-#     "image_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\shoes_1.jpg",  # Path to your local image file
-#     "prompt": "Replace the background with a beach sunset",
-#     "google_api_key": "API_KEY"
-# }
+payload = {
+    "image_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\raincoat_1.jpg",  # Path to your local image file
+    "prompt": "change the background to a green screen",
+    "google_api_key": "AIzaSyArrj7KGsMy-CwNBwtGJmmmy1o6Lom6gNM"
+}
 
-# response = requests.post(f"{BASE_URL}/change_background", json=payload)
+response = requests.post(f"{BASE_URL}/change_background", json=payload)
 
-# print("Status Code:", response.status_code)
-# print("Response JSON:", response.json())
+print("Status Code:", response.status_code)
+print("Response JSON:", response.json())
 
 
 
