@@ -20,7 +20,6 @@ import base64
 import io
 import json     
 from typing import Optional, Tuple, Union, List
-import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image as im
 # import gradio as gr
@@ -34,16 +33,31 @@ from vertexai.generative_models import Image as image_gen
 from google import genai
 from google.genai import types
 from PIL import Image as PILImage
+from PIL import Image as im
 import io
 from io import BytesIO
 
-def resize_image(image_path, max_size=(1024, 1024)):
-    """Resize image for faster processing."""
-    img = PILImage.open(image_path)
-    img.thumbnail(max_size)
-    byte_arr = io.BytesIO()
-    img.save(byte_arr, format=img.format)
-    return byte_arr.getvalue()
+# Use the correct Google Generative AI import
+import google.generativeai as genai
+
+def resize_image_from_base64(base64_data, max_size=(1024, 1024)):
+    """Resize image from base64 data for faster processing."""
+    try:
+        # Remove data URL prefix if present
+        if ',' in base64_data:
+            base64_data = base64_data.split(',')[1]
+        
+        img_data = base64.b64decode(base64_data)
+        img = PILImage.open(BytesIO(img_data))
+        img.thumbnail(max_size)
+        
+        byte_arr = BytesIO()
+        img.save(byte_arr, format='JPEG')
+        return byte_arr.getvalue()
+    except Exception as e:
+        print(f"Error resizing image from base64: {e}")
+        # Return original base64 decoded data as fallback
+        return base64.b64decode(base64_data)
 
 def image_to_bytes(image: PILImage.Image):
     """Convert PIL Image to bytes."""
@@ -51,18 +65,19 @@ def image_to_bytes(image: PILImage.Image):
     image.save(img_byte_arr, format="PNG")
     return img_byte_arr.getvalue()
     
-import google.generativeai as genai
-import base64
-from PIL import Image
-import io
+def base64_to_image_bytes(base64_string):
+    """Convert base64 string to image bytes."""
+    try:
+        # Remove data URL prefix if present
+        if ',' in base64_string:
+            base64_string = base64_string.split(',')[1]
+        return base64.b64decode(base64_string)
+    except Exception as e:
+        print(f"Error converting base64 to bytes: {e}")
+        return None
 
-def image_to_base64(image_path):
-    """Convert image to base64 string."""
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode("utf-8")
-
-def generate_product_description(image1_path, image2_path, google_api_key):
-    """Generates a product description for an image using Gemini with user-provided API key."""
+def generate_product_description(image1_base64, image2_base64, google_api_key):
+    """Generates a product description for images using Gemini with user-provided API key."""
     try:
         # Configure Gemini with user API key
         genai.configure(api_key=google_api_key)
@@ -70,15 +85,61 @@ def generate_product_description(image1_path, image2_path, google_api_key):
         # Load Gemini model
         model = genai.GenerativeModel("gemini-1.5-flash")
 
-        # Convert images to base64
-        img1_b64 = image_to_base64(image1_path)
-        img2_b64 = image_to_base64(image2_path)
+        # Handle base64 data (remove prefix if present)
+        if ',' in image1_base64:
+            img1_b64 = image1_base64.split(',')[1]
+        else:
+            img1_b64 = image1_base64
+            
+        if ',' in image2_base64:
+            img2_b64 = image2_base64.split(',')[1]
+        else:
+            img2_b64 = image2_base64
+
+        # Convert base64 to PIL Images for the model
+        img1_data = base64.b64decode(img1_b64)
+        img2_data = base64.b64decode(img2_b64)
+        
+        img1 = PILImage.open(BytesIO(img1_data))
+        img2 = PILImage.open(BytesIO(img2_data))
 
         # Prompt
         base_prompt = """
-        You are a product content writer for Wildcraft, a brand known for outdoor gear and travel accessories.
-        Write a detailed, SEO-friendly product description for the provided images.
-        Make sure it is engaging, informative, and professional.
+                You are a product content writer for Wildcraft, a performance-oriented outdoor lifestyle brand known for functional, durable, and stylish gear.
+                Based on the provided product image(s), write a detailed, engaging, and brand-aligned product description for use on Wildcraft’s official product page.
+
+                 Instructions for the Output:
+                Your generated description must:
+                Start with a punchy, branded intro
+
+                - Start with a **dynamic and varied introduction**. Avoid repeating phrases like "Introducing the X Backpack".
+                Use alternative openers that match the Wildcraft tone (e.g., “Engineered for the everyday explorer,” or “Crafted for comfort and resilience on the move.”)
+
+               - Include visually inferred features from the image, such as:
+               - Number and type of compartments/pockets
+               - Fabric texture, color, or layering
+               - Zippers, straps, handle design, soles, mesh panels, reflective details
+               - Padding or ergonomic shape
+
+                 Tone & Style Guide:
+               - Wildcraft’s tone is confident, active, practical, and design-forward.
+               - Use short, energetic sentences.
+               - Highlight features + benefits (not just specs).
+               - Avoid technical jargon or overly flowery language.
+               - The description should feel both functional and aspirational, tailored for everyday adventurers.
+
+                Call out functional and design features:
+               - Storage capacity (estimated if not given)
+               - Water-repellent/waterproof elements
+               - Durability (e.g., reinforced stitching, YKK zippers)
+               - Comfort (e.g., padded straps, breathable back panel)
+               - Mention use cases
+               - Commuting, trekking, city travel, monsoon utility, outdoor adventures
+               - Finish with an aspirational but grounded closing line
+                Example: “Elevate your adventures with the Evo 35 – your all-in-one travel partner!”
+
+                **Focus strictly on the product do not suggest any matching accessories for the product.**
+                Give a 2 -3 paragraph descrption not more than that focusing on all the aspects mentioned.
         """
 
         # Generate
@@ -91,10 +152,10 @@ def generate_product_description(image1_path, image2_path, google_api_key):
 
     except Exception as e:
         print(f"Error generating product description: {e}")
-        return "Error generating product description."
+        return f"Error generating product description: {str(e)}"
 
 
-def generate_product_tags(image1_path, image2_path, google_api_key):
+def generate_product_tags(image1_base64, image2_base64, google_api_key):
     """Generates product tags in JSON format using Gemini with user-provided API key."""
     try:
         # Configure Gemini with user API key
@@ -103,52 +164,83 @@ def generate_product_tags(image1_path, image2_path, google_api_key):
         # Load Gemini model
         model = genai.GenerativeModel("gemini-1.5-flash")
 
-        # Convert images to base64
-        img1_b64 = image_to_base64(image1_path)
-        img2_b64 = image_to_base64(image2_path)
+        # Handle base64 data (remove prefix if present)
+        if ',' in image1_base64:
+            img1_b64 = image1_base64.split(',')[1]
+        else:
+            img1_b64 = image1_base64
+            
+        if ',' in image2_base64:
+            img2_b64 = image2_base64.split(',')[1]
+        else:
+            img2_b64 = image2_base64
+
+        # Convert base64 to PIL Images for the model
+        img1_data = base64.b64decode(img1_b64)
+        img2_data = base64.b64decode(img2_b64)
+        
+        img1 = PILImage.open(BytesIO(img1_data))
+        img2 = PILImage.open(BytesIO(img2_data))
 
         # Prompt
         base_prompt = """
         You are an intelligent product content parser for an e-commerce platform.
-        Look at the provided product images and generate JSON tags containing:
-        {
-          "category": "",
-          "color": "",
-          "material": "",
-          "activity": "",
-          "gender": "",
-          "keywords": []
-        }
-        Only return valid JSON.
+
+        Given one or more product images, analyze the visual details , extract the following structured fields in JSON format:
+
+        - Key Feature (list of distinct single worded features or benefits)
+        - Technology (zippers, tech-enabled design, special construction,Hypalite - for bags with room capacity less than 40 liters)
+        - Material (e.g., Nylon, Polyester depict the correct material from the images provided.)
+        - Gender (Capture the correct gender either Men, Women, Unisex from the image.)
+        - Occasion (e.g., Travel, Outdoor, Work, Hiking)
+        - Compartments (e.g., "2 main compartments, 1 front pocket")
+        - Sleeve Type (Only if the product is apparel and sleeves are visible, e.g., "Full Sleeve", "Sleeveless")
+        - Compartment Closure (e.g., Zipper, Buckle)
+        - Imported or Manufactured or Marketed By (Default: "Wildcraft India")
+
+        Respond as N/A for a feature if it is not eligible for the product.
+
+        Respond ONLY with JSON.
         """
 
-        # Generate
-        response = model.generate_content([
-            {"mime_type": "image/jpeg", "data": img1_b64},
-            {"mime_type": "image/jpeg", "data": img2_b64},
-            base_prompt
-        ])
+        # Generate content with PIL images
+        response = model.generate_content([base_prompt, img1, img2])
         return response.text.strip()
 
     except Exception as e:
         print(f"Error generating product tags: {e}")
-        return "Error generating product tags."
+        return f'{{"error": "Error generating product tags: {str(e)}"}}'
 
 
-def generate_storyboard_with_prompt(google_api_key, image1_path, image2_path, pitch, num_scenes, style, language_name, language_code):
+def generate_storyboard_with_prompt(google_api_key, image1_base64, image2_base64, pitch, num_scenes, style, language_name, language_code):
     """
     Generates a storyboard JSON based on pitch, style, and two product images.
     Requires the user to provide their Google API key.
     """
-    # Configure API key (user-provided)
-    genai.configure(api_key=google_api_key)
+    try:
+        # Configure API key (user-provided)
+        genai.configure(api_key=google_api_key)
 
-    # Prepare image bytes
-    image1_bytes = resize_image(image1_path)
-    image2_bytes = resize_image(image2_path)
+        # Handle base64 data (remove prefix if present)
+        if ',' in image1_base64:
+            img1_b64 = image1_base64.split(',')[1]
+        else:
+            img1_b64 = image1_base64
+            
+        if ',' in image2_base64:
+            img2_b64 = image2_base64.split(',')[1]
+        else:
+            img2_b64 = image2_base64
 
-    # Build scenario prompt
-    prompt = f"""
+        # Convert base64 to PIL Images for the model
+        img1_data = base64.b64decode(img1_b64)
+        img2_data = base64.b64decode(img2_b64)
+        
+        img1 = PILImage.open(BytesIO(img1_data))
+        img2 = PILImage.open(BytesIO(img2_data))
+
+        # Build scenario prompt
+        prompt_text = f"""
 You are tasked with generating a creative scenario for a short marketing storyboard for a product.
 You will be given:
 - A short user-provided story pitch.
@@ -164,7 +256,7 @@ You will be given:
    - No children in the story.
    - The product must be a key visual element in the story.
 
-2. Divide the scenario into exactly 1 scene.
+2. Divide the scenario into exactly {num_scenes} scene(s).
 
 3. Select the most fitting Music Genre from:
 - Alternative & Punk
@@ -204,7 +296,7 @@ You will be given:
 - "genre": Music genre.
 - "mood": Mood.
 - "music": Music description in English.
-- "language": {{ "name": "English", "code": "en" }}
+- "language": {{ "name": "{language_name}", "code": "{language_code}" }}
 - "characters": List of character objects with:
    - "name"
    - "description": [General appearance in English, Clothing & textures, Voice description]
@@ -215,18 +307,14 @@ You will be given:
 **IMPORTANT:** Output only valid JSON. Do not include any extra text, explanations, or markdown.
 """
 
-    # Call Gemini API with text + images
-    model = genai.GenerativeModel("gemini-2.0-flash")
-    response = model.generate_content(
-        [
-            {"mime_type": "image/jpeg", "data": image1_bytes},
-            {"mime_type": "image/jpeg", "data": image2_bytes},
-            prompt
-        ]
-    )
+        # Call Gemini API with text + images
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content([prompt_text, img1, img2])
 
-    return response.text.strip()
-
+        return response.text.strip()
+    except Exception as e:
+        print(f"Error generating storyboard: {e}")
+        return f'{{"error": "Error generating storyboard: {str(e)}"}}'
 
 def init_client(api_key=None):
     from google import genai
@@ -287,30 +375,41 @@ def generate_storyboard_images(storyboard, num_images=1, api_key=None, save_dir=
 def change_background_with_gemini(google_api_key, image_path, prompt):
     try:
         import google.genai as genai
+        import time  # Add this import
+        
         # Ensure output folder exists
         output_dir = "bg_change_images"
         os.makedirs(output_dir, exist_ok=True)
 
         # Output file path
-        output_filename = f"bg_changed_{int(os.times()[4])}.png"
+        output_filename = f"bg_changed_{int(time.time() * 1000)}.png"  # Better timestamp
         output_path = os.path.join(output_dir, output_filename)
+
+        # Debug: Print what image we're trying to use
+        print(f"Attempting to open image: {image_path}")
+        
+        # Check if image file exists
+        if not os.path.exists(image_path):
+            print(f"Error: Image file not found at {image_path}")
+            return None, f"Error: Image file not found at {image_path}"
 
         # Read image from disk
         img = PILImage.open(image_path)
+        print(f"Successfully opened image: {image_path}, size: {img.size}")
 
         # Initialize Gemini client
         client = genai.Client(api_key=google_api_key)
-
         system_message = """
             You are a highly skilled background change assistant.  
-            Your role is to modify or replace the background of images while strictly preserving the main subject’s integrity, details, and proportions.  
+            Your role is to modify or replace the background of images while strictly preserving the main subject's integrity, details, and proportions.  
             Always ensure that the output looks natural, high-quality, and visually consistent with the subject.  
-            Do not alter the subject’s appearance, angle, POV, clothing, or identity.  
+            Do not alter the subject's appearance, angle, POV, clothing, or identity unless explicitly requested.  
             If the user provides creative background prompts, adapt them faithfully while maintaining photorealism and proper lighting.  
-            Never remove, distort, or obscure the main subject.  
+            Never remove, distort, or obscure the main subject unless instructed.  
                     """
 
         full_prompt = system_message + prompt
+
         # Send to Gemini API
         response = client.models.generate_content(
             model="gemini-2.0-flash-preview-image-generation",
@@ -326,99 +425,16 @@ def change_background_with_gemini(google_api_key, image_path, prompt):
             if part.inline_data is not None:
                 image_output = PILImage.open(BytesIO(part.inline_data.data))
                 image_output.save(output_path)  # Save to output folder
+                print(f"Image saved successfully to: {output_path}")
+                break
 
-        return image_output, output_path
+        if image_output:
+            return image_output, output_path
+        else:
+            return None, "Error: No image data received from Gemini API"
 
     except Exception as e:
+        print(f"Error in change_background_with_gemini: {e}")
+        import traceback
+        traceback.print_exc()
         return None, f"Error: {e}"
-
-
-
-# import gradio as gr
-
-
-# with gr.Blocks(title="WILDCRAFT PDP Content Generation") as interface:
-#     gr.Markdown("## Upload Two images to generate Description and Tags for WildCraft Products")
-
-#     with gr.Row():
-#         image1 = gr.Image(type="pil", label="Image 1")
-#         image2 = gr.Image(type="pil", label="Image 2")
-
-#     with gr.Row():
-#         description_box = gr.Textbox(
-#             label="Generated Product Description"
-#         )
-#         tags_box = gr.Textbox(
-#             label="Generated Product Tags"
-#         )
-
-
-#     with gr.Row():
-#         pitch_input = gr.Textbox(label="Story Pitch", placeholder="Enter your storyboard idea...")
-#         num_scenes_input = gr.Number(label="Number of Scenes", value=4, precision=0)
-#         style_input = gr.Textbox(label="Style", placeholder="Cinematic, Minimalist, etc.")
-#         language_name = gr.Textbox(label="Language Name", value="English")
-#         language_code = gr.Textbox(label="Language Code", value="en")
-
-
-
-#     with gr.Row():
-#         generate_description = gr.Button("Generate Product Description")
-#         generate_tags_btn = gr.Button("Generate Product Tags")
-#         generate_storyboard_btn = gr.Button("Generate Storyboard")
-
-
-#     generate_description.click(
-#         fn=generate_product_description,
-#         inputs=[image1, image2],
-#         outputs=description_box
-#     )
-
-#     generate_tags_btn.click(
-#         fn=generate_product_tags,
-#         inputs=[image1, image2],
-#         outputs=tags_box
-#     )
-
-#     with gr.Row():
-#         storyboard_box = gr.Textbox(
-#             label="Generated Storyboard"
-#         )
-
-#     generate_storyboard_btn.click(
-#         fn=generate_storyboard_with_prompt,
-#         inputs=[image1, image2, pitch_input, num_scenes_input, style_input, language_name, language_code],
-#         outputs=storyboard_box
-#     )
-
-#     with gr.Row():
-#         generate_images_btn = gr.Button("Generate Images from Storyboard")
-#     gallery = gr.Gallery(label="Generated Storyboard Images",columns=2 , height="auto")
-
-#     generate_images_btn.click(
-#         fn=generate_images_using_storyboard,
-#         inputs=storyboard_box,
-#         outputs=gallery
-#     )
-
-#     with gr.Row():
-#         input_img = gr.Image(type="pil", label="Upload Product Image")
-#         prompt_box = gr.Textbox(label="Background Change Prompt", placeholder="e.g., Add a Wildcraft store in the background")
-
-#     with gr.Row():
-#         generate_btn = gr.Button("Generate Image")
-
-#     with gr.Row():
-#         output_img = gr.Image(label="Generated Image")
-#         # output_text = gr.Textbox(label="Gemini's Response", lines=3)
-
-#     generate_btn.click(
-#         fn=change_background_with_gemini,
-#         inputs=[input_img, prompt_box],
-#         outputs=output_img
-#     )
-
-# if __name__ == "__main__":
-#     interface.launch(debug=True)
-
-

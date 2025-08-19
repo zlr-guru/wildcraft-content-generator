@@ -136,6 +136,38 @@ def health_check():
     return create_success_response({"status": "healthy", "message": "Wildcraft API is running"})
 
 
+@app.route("/upload-image", methods=["POST"])
+def upload_image():
+    """Upload an image file and return the saved path."""
+    try:
+        if 'image' not in request.files:
+            return jsonify({"error": "No image file provided"}), 400
+        
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Create uploads directory if it doesn't exist
+        upload_dir = "uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Save the file with a unique name
+        import time
+        timestamp = int(time.time() * 1000)
+        filename = f"upload_{timestamp}_{file.filename}"
+        file_path = os.path.join(upload_dir, filename)
+        
+        file.save(file_path)
+        
+        return jsonify({
+            "status": "success",
+            "filename": filename,
+            "file_path": file_path
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/change_background", methods=["POST"])
 def api_change_background():
     try:
