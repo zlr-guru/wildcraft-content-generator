@@ -183,7 +183,7 @@ def generate_product_tags(image1_base64, image2_base64, google_api_key):
         img2 = PILImage.open(BytesIO(img2_data))
 
         # Prompt
-        base_prompt = """
+        base_prompt = f"""
         You are an intelligent product content parser for an e-commerce platform.
 
         Given one or more product images, analyze the visual details , extract the following structured fields in JSON format:
