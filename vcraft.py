@@ -342,14 +342,35 @@ def generate_storyboard_images(storyboard, num_images=1, api_key=None, save_dir=
     client = init_client(api_key)
 
     base_prompt = f"""
-        Create a highly realistic, cinematic lifestyle photograph based on the following storyboard description:
-        {storyboard}.
-        The image should depict natural lighting, real human appearances, authentic clothing textures, and realistic backgrounds.
-        Avoid any cartoon, illustration, or animated styles.
-        Ensure the photo has the depth, detail, and sharpness of a high-resolution DSLR photograph, resembling an actual scene from real life.
+            Create a **highly realistic, cinematic lifestyle photograph** based on the following storyboard description:
+            {storyboard}.
 
-        Create only a single image. Do not create a collage.
-        """
+            The image should look like it was captured with a professional **full-frame DSLR or cinema camera**, featuring:
+            - **Natural, dynamic lighting** (golden hour, ambient daylight, or soft indoor tones depending on the scene).
+            - **Authentic human appearances** with realistic skin tones, expressions, and body postures.
+            - **True-to-life clothing and material textures** with visible fabric details (cotton, silk, denim, wool, etc.).
+            - **High-fidelity backgrounds** that feel grounded in reality (streets, homes, offices, nature, etc.) with depth and perspective.
+
+            **Product requirements:**
+            - The product must be the **primary focal point** of the photograph.
+            - Ensure the product is shown with **sharp clarity, accurate colors, and true textures**.
+            - The product should appear **naturally integrated** into the lifestyle setting, not artificially placed.
+            - Capture product details efficiently (logos, textures, stitching, packaging, finishes, etc.) without distraction.
+
+            Photographic requirements:
+            - **Ultra high-resolution** with fine detail and clarity.
+            - **Cinematic composition** (rule of thirds, natural framing, shallow depth of field when suitable).
+            - **Lens effects** such as bokeh, subtle grain, and depth for realism.
+            - **Color grading** in the style of cinematic photography: rich but natural tones, balanced contrast, film-like finish.
+
+            Strictly avoid:
+            - Cartoonish, illustrated, AI-art, or animated aesthetics.
+            - Unrealistic proportions or artificial looks.
+            - Collages or multiple images — **generate only a single cohesive photograph**.
+
+            The output should be indistinguishable from a real captured moment, as if taken by a professional lifestyle photographer for a high-end editorial or cinematic campaign, while ensuring the **product is highlighted naturally and clearly**.
+            """
+
 
     if isinstance(base_prompt, dict):
         prompt = json.dumps(base_prompt, indent=2)
@@ -399,16 +420,8 @@ def change_background_with_gemini(google_api_key, image_path, prompt):
 
         # Initialize Gemini client
         client = genai.Client(api_key=google_api_key)
-        system_message = """
-            You are a highly skilled background change assistant.  
-            Your role is to modify or replace the background of images while strictly preserving the main subject's integrity, details, and proportions.  
-            Always ensure that the output looks natural, high-quality, and visually consistent with the subject.  
-            Do not alter the subject's appearance, angle, POV, clothing, or identity unless explicitly requested.  
-            If the user provides creative background prompts, adapt them faithfully while maintaining photorealism and proper lighting.  
-            Never remove, distort, or obscure the main subject unless instructed.  
-                    """
 
-        full_prompt = system_message + prompt
+        full_prompt = prompt
 
         # Send to Gemini API
         response = client.models.generate_content(

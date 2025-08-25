@@ -16,15 +16,15 @@ BASE_URL = "http://127.0.0.1:5000"
 
 
 
-# # 2. Test generate_product_tags
-# url = f"{BASE_URL}/generate_product_tags"
-# payload = {
-#     "image1_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\bag_1.jpg",
-#     "image2_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\bag_2.jpg",
-#     "google_api_key": "API_KEY"
-# }
-# r = requests.post(url, json=payload)
-# print("generate_product_tags:", r.json())
+# 2. Test generate_product_tags
+url = f"{BASE_URL}/generate_product_tags"
+payload = {
+    "image1_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\bag_1.jpg",
+    "image2_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\bag_2.jpg",
+    "google_api_key": "AIzaSyAZcg46NcnId88vQsHzwwda6e1MaXLVEn4"
+}
+r = requests.post(url, json=payload)
+print("generate_product_tags:", r.json())
 
 
 
@@ -43,20 +43,20 @@ BASE_URL = "http://127.0.0.1:5000"
 # })
 # print("/generate_storyboard:", res.json())
 
-# 4. Test change_background
-import requests
+# # 4. Test change_background
+# import requests
 
 
-payload = {
-    "image_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\raincoat_1.jpg",  # Path to your local image file
-    "prompt": "change the background to a green screen",
-    "google_api_key": "AIzaSyArrj7KGsMy-CwNBwtGJmmmy1o6Lom6gNM"
-}
+# payload = {
+#     "image_path": "C:\\Users\\GuruCharan\\Documents\\Wildcraft\\wcraft_vscode\\raincoat_1.jpg",  # Path to your local image file
+#     "prompt": "change the background to a green screen",
+#     "google_api_key": "AIzaSyArrj7KGsMy-CwNBwtGJmmmy1o6Lom6gNM"
+# }
 
-response = requests.post(f"{BASE_URL}/change_background", json=payload)
+# response = requests.post(f"{BASE_URL}/change_background", json=payload)
 
-print("Status Code:", response.status_code)
-print("Response JSON:", response.json())
+# print("Status Code:", response.status_code)
+# print("Response JSON:", response.json())
 
 
 

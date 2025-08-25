@@ -9,5 +9,7 @@ generated_images/
 *.jpg
 app0.py
 app1.py
+deploy.py
 wcraft.py
 bg_change_images/
+input_images/
